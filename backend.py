@@ -10,7 +10,9 @@ app.config['MQTT_KEEPALIVE'] = 5  # set the time interval for sending a ping to 
 app.config['MQTT_TLS_ENABLED'] = False  # set TLS to disabled for testing purposes
 
 notifications = []
-json_stats = json.loads("{}")
+
+response_await = False
+response_data = {}
 
 mqtt = Mqtt(app)
 
@@ -24,16 +26,20 @@ def handle_connect(client, userdata, flasgs, rc):
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
 	if message.topic == 'stats':
-		global json_stats
-		json_stats = json.loads(message.payload.decode())
+		global response_await, response_data
+		response_data = json.loads(message.payload.decode())
+		response_await = False
 	elif message.topic == 'push':
 		notifications.append(json.loads(message.payload.decode()))
 
 
 @app.route('/api/get_stats', methods=['POST'])
 def api_stats():
+	response_await = True
 	mqtt.publish('commands', 'stats')
-	resp = Response(json.dumps(json_stats), status=200, mimetype='application/json')
+	while response_await:
+		sleep(1)
+	resp = Response(json.dumps(response_data), status=200, mimetype='application/json')
 	return resp
 
 
