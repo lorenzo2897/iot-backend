@@ -12,7 +12,6 @@ app.config['MQTT_TLS_ENABLED'] = False  # set TLS to disabled for testing purpos
 
 notifications = []
 
-response_await = False
 response_data = {}
 
 mqtt = Mqtt(app)
@@ -27,19 +26,15 @@ def handle_connect(client, userdata, flasgs, rc):
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
 	if message.topic == 'stats':
-		global response_await, response_data
+		global response_data
 		response_data = json.loads(message.payload.decode())
-		response_await = False
 	elif message.topic == 'push':
 		notifications.append(json.loads(message.payload.decode()))
 
 
 @app.route('/api/get_stats', methods=['POST'])
 def api_stats():
-	response_await = True
 	mqtt.publish('commands', 'stats')
-	while response_await:
-		sleep(1)
 	resp = Response(json.dumps(response_data), status=200, mimetype='application/json')
 	return resp
 
