@@ -1,6 +1,6 @@
 from flask import Flask, Response, json, request
 from flask_mqtt import Mqtt
-
+import httplib, urllib
 
 app = Flask(__name__)
 
@@ -14,6 +14,11 @@ json_stats = json.loads("{}")
 
 mqtt = Mqtt(app)
 
+key = 'key=AAAAHLKcF84:APA91bFNR4KXaE5zcTTSSkFRxIoTTYEmIAdRqqAHFeO5-N1Rmb9gOmCKOAYk5Ho9ckOcrbeVx5u09GRB_MbaUsycbk03S2QprA9qaMyUlMqHeEsYkYKuiswHM9otndSt_CgyyI9US3Rl'
+headers = {
+				"Content-Type": "application/json",
+				"Authorization": key
+			}
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flasgs, rc):
@@ -27,6 +32,14 @@ def handle_mqtt_message(client, userdata, message):
 		global json_stats
 		json_stats = json.loads(message.payload.decode())
 	elif message.topic == 'push':
+		conn = httplib.HTTPSConnection("fcm.googleapis.com:443")
+		data = json.dumps({
+			"to": "/topics/tea",
+			"data": json.loads(message.payload.decode())
+			})
+		conn.request("POST", "/fcm/send", data, headers)
+		response = conn.getresponse()
+		print response.status, response.reason
 		notifications.append(json.loads(message.payload.decode()))
 
 
@@ -60,7 +73,9 @@ def api_update_settings():
 
 @app.route('/api/notifications', methods=['POST'])
 def api_notifications():
+	global notifications
 	resp = Response(json.dumps(notifications), status=200, mimetype='application/json')
+	notifications = []
 	return resp
 
 
