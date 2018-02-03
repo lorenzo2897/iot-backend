@@ -21,7 +21,7 @@ headers = {
 	}
 
 def log_print(x):
-	print datetime.datetime.now().strftime("%Y-%m-%d %H:%M: "), x
+	print datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S: "), x
 
 def send_google_push(data):
 	log_print("sending push data")
@@ -42,14 +42,14 @@ def handle_connect(client, userdata, flasgs, rc):
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
-	log_print("got MQTT message: /" + message.topic)
-	if message.topic == 'push':
-		try:
+	try:
+		log_print("got MQTT message: /" + message.topic + ", " + len(message.payload.decode()) + " bytes")
+		if message.topic == 'push':
 			send_google_push(message.payload.decode())
 			notifications.append(json.loads(message.payload.decode()))
-		except Exception as err:
-			log_print("Failed to handle mqtt message")
-			log_print(err)
+	except Exception as err:
+		log_print("Failed to handle mqtt message")
+		log_print(err)
 
 
 @app.route('/api/get_stats', methods=['POST'])
