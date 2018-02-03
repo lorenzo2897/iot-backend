@@ -32,7 +32,7 @@ def send_google_push(data):
 		})
 	conn.request("POST", "/fcm/send", data, headers)
 	response = conn.getresponse()
-	log_print("response " + response.status + " " + response.reason)
+	log_print("response " + str(response.status) + " " + response.reason)
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flasgs, rc):
@@ -43,7 +43,7 @@ def handle_connect(client, userdata, flasgs, rc):
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
 	try:
-		log_print("got MQTT message: /" + message.topic + ", " + len(message.payload.decode()) + " bytes")
+		log_print("got MQTT message: /" + message.topic + ", " + str(len(message.payload.decode())) + " bytes")
 		if message.topic == 'push':
 			send_google_push(message.payload.decode())
 			notifications.append(json.loads(message.payload.decode()))
