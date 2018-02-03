@@ -1,6 +1,7 @@
 from flask import Flask, Response, json, request
 from flask_mqtt import Mqtt
 import httplib, urllib
+import datetime
 
 app = Flask(__name__)
 
@@ -19,7 +20,11 @@ headers = {
 		"Authorization": key
 	}
 
+def log_print(x):
+	print datetime.datetime.now().strftime("%Y-%m-%d %H:%M: "), x
+
 def send_google_push(data):
+	log_print("sending push data")
 	conn = httplib.HTTPSConnection("fcm.googleapis.com:443")
 	data = json.dumps({
 		"to": "/topics/tea",
@@ -27,27 +32,30 @@ def send_google_push(data):
 		})
 	conn.request("POST", "/fcm/send", data, headers)
 	response = conn.getresponse()
-	print response.status, response.reason
+	log_print("response " + response.status + " " + response.reason)
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flasgs, rc):
 	mqtt.subscribe('push')
+	log_print("connected to MQTT broker")
 
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
+	log_print("got MQTT message: /" + message.topic)
 	if message.topic == 'push':
 		try:
 			send_google_push(message.payload.decode())
 			notifications.append(json.loads(message.payload.decode()))
 		except Exception as err:
-			print "Failed to handle mqtt message"
-			print err
+			log_print("Failed to handle mqtt message")
+			log_print(err)
 
 
 @app.route('/api/get_stats', methods=['POST'])
 def api_stats():
 	mqtt.publish('commands', 'stats')
+	log_print("sent MQTT command: stats")
 	resp = Response('{"done": True}', status=200, mimetype='application/json')
 	return resp
 
@@ -55,6 +63,7 @@ def api_stats():
 @app.route('/api/make_tea', methods=['POST'])
 def api_make_tea():
 	mqtt.publish('commands', 'make_tea')
+	log_print("sent MQTT command: make_tea")
 	resp = Response('{"done": True}', status=200, mimetype='application/json')
 	return resp
 
@@ -62,6 +71,7 @@ def api_make_tea():
 @app.route('/api/abort', methods=['POST'])
 def api_abort():
 	mqtt.publish('commands', 'abort')
+	log_print("sent MQTT command: abort")
 	resp = Response('{"done": True}', status=200, mimetype='application/json')
 	return resp
 
@@ -69,6 +79,7 @@ def api_abort():
 @app.route('/api/update_settings', methods=['POST'])
 def api_update_settings():
 	mqtt.publish('set', request.form.get('data'))
+	log_print("sent MQTT command: set")
 	resp = Response('{"done": True}', status=200, mimetype='application/json')
 	return resp
 
