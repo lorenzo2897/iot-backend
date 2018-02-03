@@ -37,8 +37,12 @@ def handle_connect(client, userdata, flasgs, rc):
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
 	if message.topic == 'push':
-		send_google_push(message.payload.decode())
-		notifications.append(json.loads(message.payload.decode()))
+		try:
+			send_google_push(message.payload.decode())
+			notifications.append(json.loads(message.payload.decode()))
+		except Exception as err:
+			print "Failed to handle mqtt message"
+			print err
 
 
 @app.route('/api/get_stats', methods=['POST'])
