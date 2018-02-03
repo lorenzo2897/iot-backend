@@ -10,43 +10,41 @@ app.config['MQTT_KEEPALIVE'] = 5  # set the time interval for sending a ping to 
 app.config['MQTT_TLS_ENABLED'] = False  # set TLS to disabled for testing purposes
 
 notifications = []
-json_stats = json.loads("{}")
 
 mqtt = Mqtt(app)
 
 key = 'key=AAAAHLKcF84:APA91bFNR4KXaE5zcTTSSkFRxIoTTYEmIAdRqqAHFeO5-N1Rmb9gOmCKOAYk5Ho9ckOcrbeVx5u09GRB_MbaUsycbk03S2QprA9qaMyUlMqHeEsYkYKuiswHM9otndSt_CgyyI9US3Rl'
 headers = {
-				"Content-Type": "application/json",
-				"Authorization": key
-			}
+		"Content-Type": "application/json",
+		"Authorization": key
+	}
+
+def send_google_push(data):
+	conn = httplib.HTTPSConnection("fcm.googleapis.com:443")
+	data = json.dumps({
+		"to": "/topics/tea",
+		"data": json.loads(data)
+		})
+	conn.request("POST", "/fcm/send", data, headers)
+	response = conn.getresponse()
+	print response.status, response.reason
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flasgs, rc):
-	mqtt.subscribe('stats')
 	mqtt.subscribe('push')
 
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
-	if message.topic == 'stats':
-		global json_stats
-		json_stats = json.loads(message.payload.decode())
-	elif message.topic == 'push':
-		conn = httplib.HTTPSConnection("fcm.googleapis.com:443")
-		data = json.dumps({
-			"to": "/topics/tea",
-			"data": json.loads(message.payload.decode())
-			})
-		conn.request("POST", "/fcm/send", data, headers)
-		response = conn.getresponse()
-		print response.status, response.reason
+	if message.topic == 'push':
+		send_google_push(message.payload.decode())
 		notifications.append(json.loads(message.payload.decode()))
 
 
 @app.route('/api/get_stats', methods=['POST'])
 def api_stats():
 	mqtt.publish('commands', 'stats')
-	resp = Response(json.dumps(json_stats), status=200, mimetype='application/json')
+	resp = Response('{"done": True}', status=200, mimetype='application/json')
 	return resp
 
 
@@ -82,4 +80,4 @@ def api_notifications():
 # Test page to check if flask is running
 @app.route('/')
 def hello_world():
-	return 'Hello World!'
+	return 'Flask tea service'
