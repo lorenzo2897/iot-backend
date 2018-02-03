@@ -62,7 +62,7 @@ def api_stats():
 
 @app.route('/api/make_tea', methods=['POST'])
 def api_make_tea():
-	mqtt.publish('commands', 'make_tea')
+	mqtt.publish('start', request.form.get('data'))
 	log_print("sent MQTT command: make_tea")
 	resp = Response('{"done": True}', status=200, mimetype='application/json')
 	return resp
